@@ -10,6 +10,8 @@ const {getDatabase,set} = require('firebase/database');
 const reff = require('firebase/database').ref;
 const {getStorage,getDownloadURL,ref,uploadBytes} = require('firebase/storage');
 const {firebaseApp} = require('./config.js');
+const fsExtra = require('fs-extra');
+
 
 app.use(express.json());
 app.use(express.urlencoded({extended:true}));
@@ -54,6 +56,7 @@ const upload = multer({storage:storage})
 
 app.post('/process',upload.single('img'),async function(req,res){
     try{
+        console.log(req);
     let file = req.file;
     Image.load('tmp/uploads/'+file.filename).then((img)=>{
         const grey = img.grey();
@@ -61,16 +64,15 @@ app.post('/process',upload.single('img'),async function(req,res){
         edge.save('tmp/uploads/'+file.filename+"-edge.png");
     })
     const link1 = await uploadImageToStorage(fs.readFileSync(path.join('tmp/uploads/' + req.file.filename)),file.filename);
-    const link2 = await uploadImageToStorage(fs.readFileSync(path.join('tmp/uploads/' + req.file.filename)),file.filename+"-edge.png");
-    const stored= await uploadLinksToRDB(link1,link2);
+    const link2 = await uploadImageToStorage(fs.readFileSync(path.join('tmp/uploads/' + req.file.filename+"-edge.png")),file.filename+"-edge.png");
+    const stored= await uploadLinksToRDB(link1,link2);    
+    fsExtra.emptyDirSync('./tmp/uploads/');
     return res.status(200).json({success:true,original:link1,edged:link2});
-    }
+    }  
     catch(ex){
         return res.status(500).json({success:false,error:ex.message})
     }
 })
-
-
 
 app.listen(5000,()=>{
     console.log("Server running at port 5000");
